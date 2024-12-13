@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDE Process Visualizer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Verdana', sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .app-container {
+            max-width: 850px;
+            margin: auto;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #218838;
+        }
+        canvas {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <h1>SDE Process Visualizer</h1>
+        <div class="input-group">
+            <label for="processSelector">Choose a Process</label>
+            <select id="processSelector" onchange="displayInputs()">
+                <option value="Bernoulli">Bernoulli Process</option>
+                <option value="RandomWalk">Random Walk</option>
+                <option value="Poisson">Poisson Process</option>
+                <option value="Brownian">Brownian Motion</option>
+            </select>
+        </div>
+
+        <div id="dynamicInputs">
+            <!-- Input fields dynamically generated here -->
+        </div>
+
+        <button class="btn" onclick="startSimulation()">Run Simulation</button>
+
+        <canvas id="resultChart"></canvas>
+    </div>
+
+    <script>
+        // Function to dynamically render inputs based on selected process
+        function displayInputs() {
+            const selectedProcess = document.getElementById("processSelector").value;
+            const inputArea = document.getElementById("dynamicInputs");
+            inputArea.innerHTML = ""; // Clear previous inputs
+
+            if (selectedProcess === "Bernoulli") {
+                inputArea.innerHTML = `
+                    <div class="input-group">
+                        <label for="numAgents">Number of Agents</label>
+                        <input type="number" id="numAgents" value="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="numTargets">Number of Targets</label>
+                        <input type="number" id="numTargets" value="50">
+                    </div>
+                    <div class="input-group">
+                        <label for="successProbability">Success Probability</label>
+                        <input type="number" id="successProbability" value="0.1" step="0.01" min="0" max="1">
+                    </div>
+                `;
+            } else if (selectedProcess === "RandomWalk") {
+                inputArea.innerHTML = `
+                    <div class="input-group">
+                        <label for="numAgents">Number of Agents</label>
+                        <input type="number" id="numAgents" value="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="numSteps">Number of Steps</label>
+                        <input type="number" id="numSteps" value="50">
+                    </div>
+                    <div class="input-group">
+                        <label for="moveProbability">Move Probability</label>
+                        <input type="number" id="moveProbability" value="0.5" step="0.01" min="0" max="1">
+                    </div>
+                `;
+            } else if (selectedProcess === "Poisson") {
+                inputArea.innerHTML = `
+                    <div class="input-group">
+                        <label for="numEvents">Number of Events</label>
+                        <input type="number" id="numEvents" value="50">
+                    </div>
+                    <div class="input-group">
+                        <label for="rateParameter">Rate Parameter (λ)</label>
+                        <input type="number" id="rateParameter" value="0.1" step="0.01">
+                    </div>
+                `;
+            } else if (selectedProcess === "Brownian") {
+                inputArea.innerHTML = `
+                    <div class="input-group">
+                        <label for="simulations">Number of Simulations</label>
+                        <input type="number" id="simulations" value="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="intervals">Number of Intervals</label>
+                        <input type="number" id="intervals" value="50">
+                    </div>
+                    <div class="input-group">
+                        <label for="stepProbability">Step Probability</label>
+                        <input type="number" id="stepProbability" value="0.5" step="0.01" min="0" max="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="stepSize">Step Size</label>
+                        <input type="number" id="stepSize" value="1" step="0.1">
+                    </div>
+                `;
+            }
+        }
+
+        // Function to simulate based on the selected process
+        function startSimulation() {
+            const selectedProcess = document.getElementById("processSelector").value;
+            let simulationData = [];
+
+            if (selectedProcess === "Bernoulli") {
+                const numAgents = parseInt(document.getElementById("numAgents").value);
+                const numTargets = parseInt(document.getElementById("numTargets").value);
+                const successProbability = parseFloat(document.getElementById("successProbability").value);
+                simulationData = simulateBernoulli(numAgents, numTargets, successProbability);
+            } else if (selectedProcess === "RandomWalk") {
+                const numAgents = parseInt(document.getElementById("numAgents").value);
+                const numSteps = parseInt(document.getElementById("numSteps").value);
+                const moveProbability = parseFloat(document.getElementById("moveProbability").value);
+                simulationData = simulateRandomWalk(numAgents, numSteps, moveProbability);
+            } else if (selectedProcess === "Poisson") {
+                const numEvents = parseInt(document.getElementById("numEvents").value);
+                const rateParameter = parseFloat(document.getElementById("rateParameter").value);
+                simulationData = simulatePoisson(numEvents, rateParameter);
+            } else if (selectedProcess === "Brownian") {
+                const simulations = parseInt(document.getElementById("simulations").value);
+                const intervals = parseInt(document.getElementById("intervals").value);
+                const stepProbability = parseFloat(document.getElementById("stepProbability").value);
+                const stepSize = parseFloat(document.getElementById("stepSize").value);
+                simulationData = simulateBrownian(simulations, intervals, stepProbability, stepSize);
+            }
+
+            renderChart(simulationData, selectedProcess);
+        }
+
+        // Simulations (implement your logic for each process here)
+        function simulateBernoulli(numAgents, numTargets, successProbability) {
+            return Array.from({ length: numTargets }, () => Math.random() < successProbability ? 1 : 0);
+        }
+
+        function simulateRandomWalk(numAgents, numSteps, moveProbability) {
+            let position = 0;
+            return Array.from({ length: numSteps }, () => {
+                position += Math.random() < moveProbability ? 1 : -1;
+                return position;
+            });
+        }
+
+        function simulatePoisson(numEvents, rateParameter) {
+            let time = 0;
+            return Array.from({ length: numEvents }, () => {
+                time += -Math.log(1.0 - Math.random()) / rateParameter;
+                return time;
+            });
+        }
+
+        function simulateBrownian(simulations, intervals, stepProbability, stepSize) {
+            let positions = Array(intervals).fill(0);
+            for (let i = 0; i < simulations; i++) {
+                let position = 0;
+                for (let j = 0; j < intervals; j++) {
+                    position += Math.random() < stepProbability ? stepSize : -stepSize;
+                    positions[j] += position;
+                }
+            }
+            return positions.map(pos => pos / simulations);
+        }
+
+        // Render chart with data
+        function renderChart(data, processName) {
+            const ctx = document.getElementById("resultChart").getContext("2d");
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map((_, i) => i + 1),
+                    datasets: [{
+                        label: `${processName} Simulation`,
+                        data: data,
+                        borderColor: '#007bff',
+                        borderWidth: 2,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Step / Interval' }},
+                        y: { title: { display: true, text: 'Value' }}
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
